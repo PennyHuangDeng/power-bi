@@ -1,0 +1,85 @@
+新建列：
+Day of Week = WEEKDAY(AW_Calendar_Lookup[Date],2)
+Short Day = UPPER(LEFT(AW_Calendar_Lookup[Day Name],3))
+Short Month = UPPER(LEFT(AW_Calendar_Lookup[Month Name],3))
+
+Weekend = IF(AW_Calendar_Lookup[Day of Week]=6 || AW_Calendar_Lookup[Day of Week]=7,"Weekend","Weekday")
+
+BirthYear_CC = AW_Customer_Lookup[BirthDate].[Year]
+Current Age = DATEDIFF(AW_Customer_Lookup[BirthDate],TODAY(),YEAR)
+Customer Priority = IF(AW_Customer_Lookup[Current Age]<50 && AW_Customer_Lookup[AnnualIncome]>100000,"Priority","Standard")
+
+FullName_CC = AW_Customer_Lookup[Prefix] & " " & AW_Customer_Lookup[FirstName] & " " & AW_Customer_Lookup[LastName]
+
+Parent = IF(AW_Customer_Lookup[TotalChildren]>0,"Yes","No")
+
+Price Point = IF(AW_Product_Lookup[ProductPrice]>500,"High",IF(AW_Product_Lookup[ProductPrice]>100,"Mid-Range","Low"))
+
+SKU Category = LEFT(AW_Product_Lookup[ProductSKU],SEARCH("-",AW_Product_Lookup[ProductSKU])-1)
+
+QuantityType = IF(AW_Sales[OrderQuantity]>1,"Multiple Items","Single Item")
+
+
+新建度量值：
+Adjusted Price = [Avg Retail Price] * (1 + 'Price Adjustment (%)'[Price Adjustment (%) Value])
+
+Avg Retail Price = AVERAGE(AW_Product_Lookup[ProductPrice])
+
+Overall Avg Price = CALCULATE([Avg Retail Price],ALL(AW_Product_Lookup))
+Product Models = DISTINCTCOUNT(AW_Product_Lookup[ModelName])
+
+% of All Returns = [Total Returns] / [ALL Returns]
+
+ALL Returns = CALCULATE([Total Returns], ALL(AW_Returns))
+
+Bike Returns = CALCULATE([Total Returns], AW_Product_Category_Lookup[CategoryName] = "Bikes")
+
+Prev Month Returns = CALCULATE([Total Returns], DATEADD(AW_Calendar_Lookup[Date],-1,MONTH))
+
+Quantity Returned = SUM(AW_Returns[ReturnQuantity])
+Return Rate = DIVIDE([Quantity Returned],[Quantity Sold],"No Sales")
+Total Returns = COUNTA(AW_Returns[ReturnQuantity])
+
+% of All Orders = [Total Orders] / [ALL Orders]
+
+10-day Rolling Revenue = CALCULATE([Total Revenue], DATESINPERIOD(AW_Calendar_Lookup[Date], MAX(AW_Calendar_Lookup[Date]),-10,DAY))
+
+90-day Rolling Profit = CALCULATE([Total Profit], DATESINPERIOD(AW_Calendar_Lookup[Date],MAX(AW_Calendar_Lookup[Date]),-90,DAY))
+
+Adjusted Profit = [Adjusted Revenue] - [Total Cost]
+Adjusted Revenue = SUMX(AW_Sales, AW_Sales[OrderQuantity] * [Adjusted Price])
+ALL Orders = CALCULATE([Total Orders],ALL(AW_Sales))
+Bulk Orders = CALCULATE([Total Orders],AW_Sales[OrderQuantity] > 1)
+
+High Ticket Orders = CALCULATE([Total Orders], FILTER(AW_Product_Lookup,AW_Product_Lookup[ProductPrice] > [Overall Avg Price]))
+
+Order Target = [Prev Month Orders] * 1.1
+
+Prev Month Orders = CALCULATE([Total Orders], DATEADD(AW_Calendar_Lookup[Date],-1,MONTH))
+
+Prev Month Revenue = CALCULATE([Total Revenue], DATEADD(AW_Calendar_Lookup[Date],-1,MONTH))
+
+Quantity Sold = SUM(AW_Sales[OrderQuantity])
+Revenue Target = [Prev Month Revenue] * 1.1
+
+Total Cost = SUMX(AW_Sales, AW_Sales[OrderQuantity] * RELATED(AW_Product_Lookup[ProductCost]))
+
+Total Orders = DISTINCTCOUNT(AW_Sales[OrderNumber])
+Total Profit = [Total Revenue] - [Total Cost]
+
+Total Revenue = SUMX(AW_Sales, AW_Sales[OrderQuantity] * RELATED(AW_Product_Lookup[ProductPrice]))
+
+Weekend Orders = CALCULATE([Total Orders],AW_Calendar_Lookup[Weekend] = "Weekend")
+YTD Revenue = CALCULATE([Total Revenue], DATESYTD(AW_Calendar_Lookup[Date]))
+
+Modeling-new table：Price Adjustment (%) = GENERATESERIES(-1, 1, 0.1)
+If we wanted to generate a table of values from -1 to 1,increments of 0.1
+
+New measure：Price Adjustment (%) Value = SELECTEDVALUE('Price Adjustment (%)'[Price Adjustment (%)], 0)
+
+
+
+
+
+
+
