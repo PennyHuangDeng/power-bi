@@ -1,0 +1,387 @@
+youtub度量值 ：
+Comparative analysis dashboard:
+Date table:(two ways)
+New table:
+date dim = CALENDARAUTO()
+new column:
+year = 'date dim'[Date].[Year]
+month = 'date dim'[Date].[Month]
+monthNo = 'date dim'[Date].[MonthNo]
+qtr = 'date dim'[Date].[Quarter]
+
+modeling-new table-transform data-new source-blank query-advanced editor-复制粘贴code(power bi date table code)
+
+
+enter data:
+new measure :
+current year sales :
+CY sales = 
+var CY=MAX('date dim'[year])
+return
+CALCULATE(SUM(Sales[Sale Amount]),'date dim'[year]=CY)
+
+Previous year sales:
+PY sales = CALCULATE([CY sales],SAMEPERIODLASTYEAR('date dim'[Date]))
+
+同比增长率：（当年销售额-上年同期销售额）/上年同期销售额
+YOY sales growth% = DIVIDE([CY sales]-[PY sales],[PY sales],blank())
+
+Budgeted sales:
+Budgeted sales = 
+var CY=MAX('date dim'[Date].[Year])
+Return
+CALCULATE(sum(Budget[Budgeted Amt]),'date dim'[year]=CY)
+
+Budget variance%:(预算差异率)
+Budget variance% = DIVIDE([CY sales]-[Budgeted sales],[Budgeted sales],BLANK())
+
+Quality analysis dashboard:
+
+Data entre:
+New measure:
+defect% = DIVIDE(SUM('Quality Data'[Defects]),SUM('Quality Data'[Samples]),blank())
+
+fatal error% = DIVIDE(SUM('Quality Data'[Fatel Errors]),SUM('Quality Data'[Samples]),blank())
+
+quality score% = IF([defect%]=BLANK(),BLANK(),1-[defect%])
+
+sampling% = DIVIDE(SUM('Quality Data'[Samples]),SUM('Quality Data'[Total Task]),blank())
+
+sales dashboard:
+new column:(unit sold是数量，price per unit是单价)
+revenue = 'Sales Data'[Unit Sold]*RELATED('Product Master'[Price per unit])
+----------------------------------------------------------------------------------------------------------
+新建列：
+单价 = RELATED('产品表'[单价])
+销售额 = '销售表'[单价]*'销售表'[购买数量]
+销售额 = RELATED('产品表'[单价])*'销售表'[购买数量]   --或者综合前面两个就少了一列“单价”
+
+新建度量值：
+总销售额1 = SUM('销售表'[销售额])
+总销售额2 = sumx('销售表','销售表'[购买数量]*RELATED('产品表'[单价]))  --一步到位
+包子的销售额 = CALCULATE([总销售额],'产品表'[产品分类]="包子")
+包子的销售占比 = DIVIDE([包子的销售额],[总销售额])
+粥的销售额 = CALCULATE([总销售额],'产品表'[产品分类]="粥")
+菜的销售额 = CALCULATE([总销售额],'产品表'[产品分类]="菜")
+三鲜包的销售额 = CALCULATE([总销售额],'产品表'[产品名称]="三鲜包")
+北京市的销售额 = CALCULATE([总销售额],'门店表'[店铺名]="北京市")
+
+去年同期销售额 = CALCULATE([总销售额],SAMEPERIODLASTYEAR('日期表'[日期]))
+同比增长率 = DIVIDE([总销售额],[去年同期销售额],1)-1      --，1代表没有数字的情况显示为0
+
+上月同期销售额 = CALCULATE([总销售额],DATEADD('日期表'[日期],-1,MONTH)) -- -1代表上个月
+月环比增长率 = DIVIDE([总销售额],[上月同期销售额],1)-1     --,1代表没有数字的情况显示为0
+
+订单数量 = DISTINCTCOUNT('销售表'[订单号])
+
+方法二：
+同比增长率VAR = 
+    VAR Sales=[总销售额]
+    VAR SalesLastYear=CALCULATE([总销售额],DATEADD('日期表'[日期],-1,YEAR))
+    RETURN
+    DIVIDE(Sales-SalesLastYear,SalesLastYear,0)         -- 0代表没有数字的情况显示为0
+
+月环比增长率VAR = 
+    VAR Sales=[总销售额]
+    VAR SalesLastMonth=CALCULATE([总销售额],DATEADD('日期表'[日期],-1,MONTH))
+    RETURN
+    DIVIDE(Sales-SalesLastMonth,SalesLastMonth,0)        --0代表没有数字的情况显示为0
+
+日期函数度量值 ：
+报告刷新时间 = NOW()    --每天刷新即可
+报告刷新日期 = TODAY()  --选中，设置一下格式即可
+
+年累计 = CALCULATE([总销售额],DATESYTD('日期表'[日期]))
+年累计1 = [总销售额](DATESYTD('日期表'[日期]))
+年累计2 = TOTALYTD([总销售额],'日期表'[日期])
+
+月累计 = TOTALMTD([总销售额],'日期表'[日期])
+月累计2 = [总销售额](DATESMTD('日期表'[日期]))
+
+
+
+
+
+时间智能函数：
+本期至今：
+YTD = CALCULATE([总销售额2],DATESYTD('日期表'[日期]))
+YTD2 = TOTALYTD([总销售额2],'日期表'[日期])
+// 本年至今（ctrl+/）
+
+YTD财年 = TOTALYTD([总销售额2],'日期表'[日期],"9-30")
+YTD财年2 = CALCULATE([总销售额2],DATESYTD('日期表'[日期],"9-30"))
+//财年本年至今，财年结束日期为9月30日
+
+MTD = CALCULATE([总销售额2],DATESMTD('日期表'[日期]))
+MTD2 = TOTALMTD([总销售额2],'日期表'[日期])
+// 本月至今
+
+QTD = CALCULATE([总销售额2],DATESQTD('日期表'[日期]))
+QTD2 = TOTALQTD([总销售额2],'日期表'[日期])
+// 本季至今
+
+WTD = CALCULATE([总销售额2],FILTER(ALL('日期表'),'日期表'[年周]=SELECTEDVALUE('日期表'[年周])&&'日期表'[日期]<=SELECTEDVALUE('日期表'[日期])))
+//本周至今
+
+上期同期：（比如今年是2017.4，上年同期就是2016.4）
+PM = CALCULATE([总销售额2],DATEADD('日期表'[日期],-1,MONTH))
+//上月同期(previous month)
+
+PQ = CALCULATE([总销售额2],DATEADD('日期表'[日期],-1,QUARTER))
+//上季同期
+
+PW = CALCULATE([总销售额2],DATEADD('日期表'[日期],-7,DAY))
+//上周同期,7天以前
+
+PY = CALCULATE([总销售额2],DATEADD('日期表'[日期],-1,YEAR))
+PY2 = CALCULATE([总销售额2],SAMEPERIODLASTYEAR('日期表'[日期]))
+//上年同期
+
+上期全部：（上年全部就是整个2016年）
+PMT = CALCULATE([总销售额2],PARALLELPERIOD('日期表'[日期],-1,MONTH))
+// 上月全部
+
+PQT = CALCULATE([总销售额2],PARALLELPERIOD('日期表'[日期],-1,QUARTER))
+// 上季全部
+
+PWT = CALCULATE([总销售额2],FILTER(ALL('日期表'),'日期表'[年度]=SELECTEDVALUE('日期表'[年度])&&'日期表'[一年的某一周]=SELECTEDVALUE('日期表'[一年的某一周])-1))
+// 上周全部
+
+PYT = CALCULATE([总销售额2],PARALLELPERIOD('日期表'[日期],-1,YEAR))
+// 上年全部（PYT=PREVIOUS YEAR TOTAL）
+
+环比和同比：
+YOY = [总销售额2]-[PY]
+// 同比（今年和去年比）
+YOY% = DIVIDE([YOY],[PY])
+// 同比增长率
+
+MOM = [总销售额2]-[PM]
+// 月环比（这个月和上个月比）
+MOM% = DIVIDE([MOM],[PM])
+// 月环比增长率
+
+WOW = [总销售额2]-[PW]
+// 周环比
+WOW% = DIVIDE([WOW],[PW])
+//周环比增长率
+
+本期至今（时间对比）：
+本次活动销售额 = CALCULATE([总销售额2],ALL('日期表'))
+对比日期销售额 = CALCULATE([总销售额2],DATESBETWEEN('日期表'[日期],"2017-1-1","2017-1-3"))
+
+销售指标（使用参数实现度量值的复用）：
+订单数量 = COUNTROWS('销售表')
+销售指标 = SWITCH(
+        TRUE(),
+        SELECTEDVALUE('1参数表-销售指标'[请选择销售指标])="销售额",[销售额],
+        SELECTEDVALUE('1参数表-销售指标'[请选择销售指标])="订单数量",[订单数量],
+        [销售额])
+销售额 = sumx('销售表','销售表'[购买数量]*RELATED('产品表'[单价]))
+
+移动平均：
+7日移动平均销售额 = AVERAGEX(DATESINPERIOD('日期表'[日期],MIN('日期表'[日期]),-7,DAY),[销售额])
+30日移动平均销售额 = AVERAGEX(DATESINPERIOD('日期表'[日期],MIN('日期表'[日期]),-30,DAY),[销售额])
+N日移动平均销售额 = AVERAGEX(DATESINPERIOD('日期表'[日期],MIN('日期表'[日期]),[移动平均天数 值]*-1,DAY),[销售额])
+
+Filter:
+销售额大于50000的门店的合计销售额 = CALCULATE([总销售额2],FILTER('门店表',[ 总销售额2]>60000))
+三鲜包销售额 = CALCULATE([总销售额2],FILTER(ALL('产品表'),[产品名称]="三鲜包"))
+三鲜包销售额2 = CALCULATE([总销售额2],FILTER('产品表',[产品名称]="三鲜包"))
+
+Calculate:
+
+ 
+
+
+
+
+
+
+If and switch:
+店铺等级= IF([总销售额]<50000,"D类店铺",IF([总销售额]<80000,"C类店铺",IF([总销售额]<1000000,"B类店铺","A类店铺")))
+店铺等级2 = SWITCH(
+           TRUE(),
+                [总销售额]<50000,"D类店铺",
+                [总销售额]<80000,"C类店铺",
+                [总销售额]<100000,"B类店铺",
+                "A类店铺")
+
+特别度量值 ：
+城市名 = IF(HASONEVALUE('门店表'[店铺名]),VALUES('门店表'[店铺名]) ,"全部")
+如果这个值为真，就显示values的值,否则显示全部 
+如果'门店表'[店铺名]只有一个值，求VALUES('门店表'[店铺名])，否则为“全部”
+
+性别名称 = SELECTEDVALUE('顾客表'[性别],"全部")
+---------------------------------------------------------------------------------------------
+财务费用汇部表：
+利润 = [销售额]-[费用支出] 
+利润率 = [利润]/[销售额]
+单店平均销售额 = [销售额]/[门店数量]
+环比增长率 = ([销售额]-calculate([销售额],previousmonth('日历表'[日期])))/calculate([销售额],previousmonth('日历表'[日期]))
+环比增长率 =divide(([销售量]-calculate([销售量],previousmonth('日历表'[日期]))),calculate([销售量],previousmonth('日历表'[日期])))
+年比年增长率（环比增长率） = DIVIDE(([销售量]-CALCULATE([销售量],PREVIOUSYEAR('日历表'[日期])))
+                                        ,
+                                        CALCULATE([销售量],PREVIOUSYEAR('日历表'[日期])))
+
+费用支出 = sum('财务费用汇总表'[支出])
+
+销售数据表：
+销售额 = sumx('销售数据表',[数量]*[价格2])
+门店数量 = distinctcount('销售数据表'[门店])
+顾客数量 = distinctcount('销售数据表'[顾客ID])
+销售量 = sum('销售数据表'[数量])
+单店销售量=[销售量]/[门店数量]
+拿铁销售量 = calculate([销售量],'产品表'[咖啡种类]="拿铁")                 p142
+拿铁中杯销售量 = calculate([销售量],'产品表'[咖啡种类]="拿铁",'产品表'[杯型]="中") 
+                
+filter销售量 = calculate([销售量],filter('门店信息表',[销售量]>200))       p163
+求每个季度 拿铁咖啡的销售量超过200杯的门店的销售量
+
+完成目标的门店销售量 = CALCULATE([销售量],FILTER('门店信息表','门店信息表'[季度目标值]<=[销售量]))
+未完成目标的门店销售量 = CALCULATE([销售量],filter('门店信息表','门店信息表'[季度目标值]>[销售量]))
+
+
+
+销售量>2且在2016年9月1日前的订单销售量 = CALCULATE([销售量],
+                                        filter('销售数据表','销售数据表'[数量]>2&&
+                                        '销售数据表'[订单日期]<date(2016,9,1)
+                                        ))                          p145
+
+销售量>2且订单日期在2016.9.1前，或者订单日期在2015.6.1之后 = CALCULATE([销售量],
+                                                        FILTER('销售数据表',
+                                                        ('销售数据表'[数量]>2 &&
+                                                        '销售数据表'[订单日期]<date(2016,9,1))||'销售数据表'[订单日期]>date(2015,5,1)
+                                                        ))            p146
+
+平均销售量 = AVERAGE('销售数据表'[数量])
+最大杯数 = max('销售数据表'[数量])
+订单数量 = countrows('销售数据表')
+in = CALCULATE([销售量],'产品表'[咖啡种类] in {"拿铁","美式","卡布奇诺"})
+not in = CALCULATE([销售量],not '产品表'[咖啡种类] in {"拿铁","美式","卡布奇诺"})
+
+all销售量 = CALCULATE([销售量],all('销售数据表'))
+引用表，在销售数据表中做了清除筛选的操作（即求清除所有筛选条件的总销售量）
+
+7 all 销售量 = CALCULATE([销售量],all('产品表'[咖啡种类],'产品表'[杯型]))
+引用列，在产品表中 扩大筛选条件范围，不会受咖啡种类和杯型的筛选条件的限制
+占比 = [销售量]/[7 all 销售量]
+求不同咖啡种类，不同杯型的销售量占总销售量的百分比
+
+allexcept = CALCULATE([销售量],allexcept('产品表','产品表'[杯型]))
+除了‘杯型’这列，清除其他作为筛选条件（只保留‘杯型’这列）
+
+allselected = CALCULATE([销售量],ALLSELECTED('产品表'))
+清除所有显示的筛选条件
+占比2 = [销售量]/[allselected]
+无论筛选什么，总和都是100%
+
+hasonevalue = if(HASONEVALUE('日历表'[年份季度]),[filter销售量],blank())
+--把总计数据变成空值
+
+
+
+环比增长率=（当月销售量-上月销售量）/上月销售量
+环比增长率 = divide([销售额]-CALCULATE([销售额],PREVIOUSMONTH('日历表'[日期])),CALCULATE([销售额],PREVIOUSMONTH('日历表'[日期])))
+
+同比增长率=（当年销售量-上年同期销售量）/上年同期销售量
+同比增长率 = 
+VAR SALES=SUM('销售数据表'[数量])
+VAR SALESLASTYEAR=
+        CALCULATE(SUM('销售数据表'[数量]),
+        SAMEPERIODLASTYEAR('日历表'[日期]))
+RETURN
+    DIVIDE(SALES-SALESLASTYEAR,SALESLASTYEAR)
+
+移动平均var = 
+var pastmonths=DATESINPERIOD('日历表'[日期],LASTDATE('日历表'[日期]),-3,month)
+return
+divide(
+    CALCULATE([销售量],pastmonths),
+    CALCULATE(DISTINCTCOUNT('日历表'[年份月份]),pastmonths))
+
+
+新建列：
+价格2 = related('产品表'[价格])
+switch = switch(true,
+                [年龄]>20&&[年龄]<=30,"20-30",
+                [年龄]>30&&[年龄]<=40,"30-40",
+                [年龄]>40&&[年龄]<=50,"40-50",
+                [年龄]>50,"50以上")
+产品名称 = related('产品表'[产品名称])
+订单数量 = COUNTROWS(RELATEDTABLE('销售数据表'))
+价格 = LOOKUPVALUE('产品表'[价格],'产品表'[产品名称],'销售数据表'[产品名称])
+
+NEW TABLE:
+日期表 = addcolumns(
+                CALENDAR(DATE(2016,12,28),DATE(2017,12,31)),
+                "year",YEAR([Date]),
+                "quarter",ROUNDUP(MONTH([Date])/3,0),
+                "month",MONTH([Date]),
+                "week",WEEKNUM([Date]),
+                "y&q",YEAR([Date]) & "Q"&ROUNDUP(MONTH([Date])/3,0),
+                "y&m",YEAR([Date])*100+MONTH([Date]),
+                "y&w",YEAR([Date])*100+WEEKNUM([Date]),
+                "weekday",WEEKDAY([Date])
+)
+
+门店表 = values('销售数据表'[门店])                        --这是一张虚拟表
+
+
+
+Power query数据清洗30招：
+1.	汇总文件夹中的数据
+2.	转换（transform）
+•	将第一行用作标题
+•	筛选
+•	删除列
+•	删除重复项
+•	删除空值
+•	修改数据类型
+•	检测数据类型
+•	替换
+•	填充
+•	移动列
+•	拆分列
+•	重命名列
+•	提取
+•	格式修整
+•	设置字母的大小写
+•	排序
+•	逆透视
+•	转置
+•	反转行
+•	对行进行计数
+•	分组依据
+•	复制
+3.	添加列(add column)
+•	条件列
+•	索引列
+•	重复列
+•	数字计算
+•	日期
+•	示例中的列
+•	自定义列
+
+
+Power query:M
+Power pivot:新建度理值，列-DAX
+需要放到筛选器，切片器，行，列中，它们是不能用度量值来输出的，这个时候只能使用列来完成。
+如果能用度量值来解决的问题，就不用新建列。
+Shift+enter公式换行
+
+上下文：筛选上下文-列-竖向
+       行上下文（=当前行）-行-横向
+Filter是行上下文，行上下文要转换成筛选上下文要使用calculate,度量值都自带天然的calculate函数
+
+
+
+
+
+
+
+
+
+
+
+
